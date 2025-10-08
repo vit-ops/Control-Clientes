@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Va-Clientes</title>
+<link rel="icon" href="flowers.png">
+<style>
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: #f0f4f8;
+    margin: 0;
+    padding: 0;
+}
+.container {
+    display: flex;
+    min-height: 100vh;
+    gap: 20px;
+    padding: 20px;
+}
+.left, .right {
+    flex: 1;
+    background: #fff;
+    border-radius: 12px;
+    padding: 40px 30px;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+    display: flex;
+    flex-direction: column;
+}
+h2 {
+    margin-bottom: 25px;
+    font-weight: 700;
+    font-size: 1.8rem;
+    border-left: 5px solid #0288d1;
+    padding-left: 10px;
+    color: #0288d1;
+}
+.Cadastro {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+.Cadastro input[type="text"], .modal-edit input[type="text"] {
+    padding: 12px 15px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    font-size: 1rem;
+    transition: 0.2s;
+}
+.Cadastro input[type="text"]:focus, .modal-edit input[type="text"]:focus {
+    border-color: #0288d1;
+    outline: none;
+    box-shadow: 0 0 8px rgba(2,136,209,0.3);
+}
+.Cadastro input[type="submit"] {
+    padding: 12px;
+    border: none;
+    border-radius: 8px;
+    background: #2e7d32;
+    color: white;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.2s;
+}
+.Cadastro input[type="submit"]:hover {
+    background: #27632a;
+    transform: translateY(-2px);
+}
+.Cadastrados {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-height: 80vh;
+    overflow-y: auto;
+}
+.Cadastrados button {
+    padding: 12px 15px;
+    border: none;
+    border-radius: 8px;
+    background: #e3f2fd;
+    cursor: pointer;
+    transition: 0.2s;
+    text-align: left;
+    font-size: 1rem;
+    font-weight: 500;
+    color: #0288d1;
+}
+.Cadastrados button:hover {
+    background: #bbdefb;
+}
+.modal-bg {
+    display: none;
+    position: fixed;
+    top:0; left:0;
+    width:100%; height:100%;
+    background: rgba(0,0,0,0.6);
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+.modal {
+    background: #fff;
+    border-radius: 12px;
+    width: 100%;
+    max-width: 400px;
+    padding: 25px 30px;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+.modal-info h2 {
+    color: #0288d1;
+    font-size: 1.5rem;
+    margin-bottom: 5px;
+}
+.modal-info p {
+    font-size: 1rem;
+    color: #555;
+    margin: 0;
+}
+.modal-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: space-between;
+}
+.modal-actions button, .save-edit-btn {
+    flex: 1;
+    padding: 10px 0;
+    border: none;
+    border-radius: 8px;
+    color: #fff;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.2s;
+}
+.edit-btn { background: #0288d1; }
+.edit-btn:hover { background: #0277bd; }
+.delete-btn { background: #d32f2f; }
+.delete-btn:hover { background: #c62828; }
+.modal-edit { display: none; flex-direction: column; gap: 10px; }
+.save-edit-btn { background: #2e7d32; }
+.save-edit-btn:hover { background: #27632a; }
+@media(max-width:900px){
+    .container{flex-direction:column;}
+}
+</style>
+</head>
+<body>
+
+<div class="container">
+    <div class="left">
+        <h2>Cadastrar</h2>
+        <form class="Cadastro">
+            <input type="text" id="Name" placeholder="Nome">
+            <input type="text" id="End" placeholder="Endereço">
+            <input type="text" id="tel" placeholder="Telefone">
+            <input type="submit" value="Cadastrar">
+        </form>
+    </div>
+    <div class="right">
+        <h2>Clientes</h2>
+        <div class="Cadastrados"></div>
+    </div>
+</div>
+
+<div class="modal-bg" id="modalBg">
+    <div class="modal">
+        <div class="modal-info">
+            <h2 id="modalName"></h2>
+            <p id="modalEnd"></p>
+            <p id="modalTel"></p>
+        </div>
+        <div class="modal-edit">
+            <input type="text" id="editName" placeholder="Nome">
+            <input type="text" id="editEnd" placeholder="Endereço">
+            <input type="text" id="editTel" placeholder="Telefone">
+            <button class="save-edit-btn" id="saveEdit">Salvar</button>
+        </div>
+        <div class="modal-actions">
+            <button class="edit-btn" id="editBtn">Editar</button>
+            <button class="delete-btn" id="deleteBtn">Excluir</button>
+        </div>
+    </div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-app.js";
+import { getFirestore, collection, addDoc, onSnapshot, doc, deleteDoc, updateDoc } 
+from "https://www.gstatic.com/firebasejs/12.3.0/firebase-firestore.js";
+
+const firebaseConfig = {
+    apiKey: "AIzaSyDfvbnhWMn0FOEueaS6-tQlDUbAoiyPox8",
+    authDomain: "grupo-valerio.firebaseapp.com",
+    projectId: "grupo-valerio",
+    storageBucket: "grupo-valerio.firebasestorage.app",
+    messagingSenderId: "1001661335447",
+    appId: "1:1001661335447:web:4ef3cfd6d043fbdc64a6d2"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+const formC = document.querySelector('.Cadastro');
+const divCadastrados = document.querySelector('.Cadastrados');
+
+const modalBg = document.getElementById('modalBg');
+const modalName = document.getElementById('modalName');
+const modalEnd = document.getElementById('modalEnd');
+const modalTel = document.getElementById('modalTel');
+const editBtn = document.getElementById('editBtn');
+const deleteBtn = document.getElementById('deleteBtn');
+const modalEditDiv = document.querySelector('.modal-edit');
+const editName = document.getElementById('editName');
+const editEnd = document.getElementById('editEnd');
+const editTel = document.getElementById('editTel');
+const saveEdit = document.getElementById('saveEdit');
+
+let currentDocId = null;
+
+function formatPhone(value){
+    value = value.replace(/\D/g,'');
+    if(value.length > 11) value = value.slice(0,11);
+    value = value.replace(/^(\d{2})(\d)/g,"($1) $2");
+    value = value.replace(/(\d{5})(\d)/,"$1-$2");
+    return value;
+}
+
+document.getElementById('tel').addEventListener('input', e=>{ e.target.value = formatPhone(e.target.value); });
+editTel.addEventListener('input', e=>{ e.target.value = formatPhone(e.target.value); });
+
+formC.addEventListener('submit', async (e)=>{
+    e.preventDefault();
+    const Name = document.getElementById('Name').value;
+    const End = document.getElementById('End').value;
+    const Tel = document.getElementById('tel').value;
+    await addDoc(collection(db,"Clientes"), {Name, Endereço: End, Telefone: Tel});
+    formC.reset();
+});
+
+const clientesRef = collection(db,"Clientes");
+onSnapshot(clientesRef,(snapshot)=>{
+    divCadastrados.innerHTML = '';
+    snapshot.docs.forEach(docSnap=>{
+        const btn = document.createElement('button');
+        btn.textContent = docSnap.data().Name;
+        btn.addEventListener('click', ()=>{
+            currentDocId = docSnap.id;
+            modalName.textContent = docSnap.data().Name;
+            modalEnd.textContent = "Endereço: " + docSnap.data().Endereço;
+            modalTel.textContent = "Telefone: " + docSnap.data().Telefone;
+            modalEditDiv.style.display = 'none';
+            modalBg.style.display = 'flex';
+        });
+        divCadastrados.appendChild(btn);
+        divCadastrados.appendChild(document.createElement('br'));
+    });
+});
+
+editBtn.addEventListener('click', ()=>{
+    editName.value = modalName.textContent;
+    editEnd.value = modalEnd.textContent.replace("Endereço: ","");
+    editTel.value = modalTel.textContent.replace("Telefone: ","");
+    modalEditDiv.style.display = 'flex';
+});
+
+saveEdit.addEventListener('click', async ()=>{
+    if(!currentDocId) return;
+    await updateDoc(doc(db,"Clientes",currentDocId),{
+        Name: editName.value,
+        Endereço: editEnd.value,
+        Telefone: editTel.value
+    });
+    modalEditDiv.style.display = 'none';
+});
+
+deleteBtn.addEventListener('click', async ()=>{
+    if(!currentDocId) return;
+    await deleteDoc(doc(db,"Clientes",currentDocId));
+    modalBg.style.display = 'none';
+    currentDocId = null;
+});
+
+modalBg.addEventListener('click',(e)=>{
+    if(e.target === modalBg){
+        modalBg.style.display = 'none';
+        modalEditDiv.style.display = 'none';
+        currentDocId = null;
+    }
+});
+</script>
+
+</body>
+</html>
